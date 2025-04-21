@@ -5,7 +5,7 @@ This project uses machine learning to predict customer churn using the Telco dat
 ## 📁 Files
 - `CustomerChurn.ipynb` – Main notebook with data cleaning, modeling, and evaluation
 - `WA_Fn-UseC_-Telco-Customer-Churn.csv` – Dataset
-- `app.py` – Dash web app (optional if added)
+- `app.py` – Dash web app 
 - `requirements.txt` – Python dependencies
 
 ## 🧠 ML Models Used
