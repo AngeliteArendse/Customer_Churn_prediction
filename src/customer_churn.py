@@ -12,14 +12,12 @@ import base64
 import io
 import os
 
-# Load pre-trained models and scaler
 best_logreg = joblib.load('artifacts/best_logreg.pkl')
 best_rf = joblib.load('artifacts/best_rf.pkl')
 scaler = joblib.load('artifacts/scaler.pkl')
 
-# Initialize Dash app
-app = dash.Dash(__name__, assets_folder='src/assets')  # Point to the assets folder for CSS
-server = app.server  # Explicitly define server for Gunicorn
+app = dash.Dash(__name__, assets_folder='src/assets') 
+server = app.server  
 
 app.layout = html.Div([
     html.H1('Customer Churn Prediction', className='header'),
@@ -79,7 +77,6 @@ def update_output(content):
             
             df_encoded_batch[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.transform(df_encoded_batch[['tenure', 'MonthlyCharges', 'TotalCharges']])
             
-            # Create voting classifier for batch prediction
             voting_clf = VotingClassifier(estimators=[('logreg', best_logreg), ('rf', best_rf)], voting='hard')
             voting_clf.fit(df_encoded_batch, [0]*len(df_encoded_batch))  # Dummy fit to initialize
             predictions = voting_clf.predict(df_encoded_batch)
