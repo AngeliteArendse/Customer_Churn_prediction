@@ -3,6 +3,8 @@ Zirong Luo 600287
 Angelité Arendse 600938
 Thembi Ngobeni 577522
 
+https://github.com/AngeliteArendse/Customer_Churn_prediction.git
+
 # 📊 Customer Churn Prediction
 
 This project uses machine learning to predict customer churn using the Telco dataset.

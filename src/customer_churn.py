@@ -12,7 +12,7 @@ from sklearn.metrics import accuracy_score, classification_report
 import joblib
 import os
 
-filename = "../data/Telco-Customer-Churn.csv"
+filename = "/data/Telco-Customer-Churn.csv"
 df = pd.read_csv(filename)
 df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
 df['TotalCharges'] = df['TotalCharges'].fillna(df['TotalCharges'].mean())
