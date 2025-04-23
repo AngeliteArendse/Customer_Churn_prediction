@@ -4,63 +4,32 @@ import dash
 import dash_core_components as dcc
 import dash_html_components as html
 from dash.dependencies import Input, Output
-from sklearn.model_selection import train_test_split, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.metrics import accuracy_score, classification_report
 import joblib
+import base64
+import io
 import os
 
+# Load pre-trained models
+best_logreg = joblib.load('artifacts/best_logreg.pkl')
+best_rf = joblib.load('artifacts/best_rf.pkl')
+
+# Initialize scaler
+scaler = StandardScaler()
+
+# Load and preprocess data for fitting scaler
 filename = "data/Telco-Customer-Churn.csv"
 df = pd.read_csv(filename)
 df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
 df['TotalCharges'] = df['TotalCharges'].fillna(df['TotalCharges'].mean())
 
 df_encoded = pd.get_dummies(df, drop_first=True)
+scaler.fit(df_encoded[['tenure', 'MonthlyCharges', 'TotalCharges']])
 
-scaler = StandardScaler()
-df_encoded[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.fit_transform(df_encoded[['tenure', 'MonthlyCharges', 'TotalCharges']])
-
-X = df_encoded.drop('Churn_Yes', axis=1)
-y = df_encoded['Churn_Yes']
-
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-
-logreg_params = {
-    'C': [0.001, 0.01, 0.1, 1, 10, 100],
-    'solver': ['liblinear', 'saga'],
-    'max_iter': [100, 200, 300]
-}
-logreg_model = LogisticRegression(random_state=42)
-logreg_search = RandomizedSearchCV(logreg_model, logreg_params, cv=5, n_iter=10, random_state=42, n_jobs=-1)
-
-rf_params = {
-    'n_estimators': [50, 100, 150, 200],
-    'max_depth': [None, 10, 20, 30],
-    'min_samples_split': [2, 5, 10],
-    'min_samples_leaf': [1, 2, 4],
-    'bootstrap': [True, False]
-}
-rf_model = RandomForestClassifier(random_state=42)
-rf_search = RandomizedSearchCV(rf_model, rf_params, cv=5, n_iter=10, random_state=42, n_jobs=-1)
-
-logreg_search.fit(X_train, y_train)
-rf_search.fit(X_train, y_train)
-
-best_logreg = logreg_search.best_estimator_
-best_rf = rf_search.best_estimator_
-
-voting_clf = VotingClassifier(estimators=[('logreg', best_logreg), ('rf', best_rf)], voting='hard')
-voting_clf.fit(X_train, y_train)
-
-joblib.dump(best_logreg, 'best_logreg.pkl')
-joblib.dump(best_rf, 'best_rf.pkl')
-
-voting_preds = voting_clf.predict(X_test)
-voting_accuracy = accuracy_score(y_test, voting_preds)
-voting_report = classification_report(y_test, voting_preds)
-
+# Initialize Dash app
 app = dash.Dash(__name__)
 
 app.layout = html.Div([
@@ -91,7 +60,7 @@ app.layout = html.Div([
     Input('input-totalcharges', 'value')
 )
 def update_prediction(n_clicks, tenure, monthlycharges, totalcharges):
-    if n_clicks > 0:
+    if n_clicks > 0 and all([tenure, monthlycharges, totalcharges]):
         input_data = pd.DataFrame([[tenure, monthlycharges, totalcharges]], columns=['tenure', 'MonthlyCharges', 'TotalCharges'])
         input_data_scaled = scaler.transform(input_data)
 
@@ -99,9 +68,7 @@ def update_prediction(n_clicks, tenure, monthlycharges, totalcharges):
         rf_prediction = best_rf.predict(input_data_scaled)
         
         return f'Logistic Regression Prediction: {"Churn" if logreg_prediction[0] else "No Churn"}\nRandom Forest Prediction: {"Churn" if rf_prediction[0] else "No Churn"}'
-
-import base64
-import io
+    return "Please enter all customer data."
 
 @app.callback(
     Output('output-upload', 'children'),
@@ -112,11 +79,22 @@ def update_output(content):
         content_type, content_string = content.split(',')
         decoded = base64.b64decode(content_string)
         try:
-
             df = pd.read_csv(io.StringIO(decoded.decode('utf-8')))
             df_encoded_batch = pd.get_dummies(df, drop_first=True)
+            
+            # Ensure all required columns are present
+            required_cols = ['tenure', 'MonthlyCharges', 'TotalCharges']
+            for col in required_cols:
+                if col not in df_encoded_batch:
+                    df_encoded_batch[col] = 0
+            
             df_encoded_batch[['tenure', 'MonthlyCharges', 'TotalCharges']] = scaler.transform(df_encoded_batch[['tenure', 'MonthlyCharges', 'TotalCharges']])
+            
+            # Create voting classifier for batch prediction
+            voting_clf = VotingClassifier(estimators=[('logreg', best_logreg), ('rf', best_rf)], voting='hard')
+            voting_clf.fit(df_encoded_batch, [0]*len(df_encoded_batch))  # Dummy fit to initialize
             predictions = voting_clf.predict(df_encoded_batch)
+            
             df['Churn Prediction'] = ['Churn' if p == 1 else 'No Churn' for p in predictions]
 
             return html.Div([
@@ -132,12 +110,13 @@ def update_output(content):
                     }
                 ),
                 html.Table([
-                    html.Tr([html.Th(col) for col in df.columns])]+
+                    html.Tr([html.Th(col) for col in df.columns])] +
                     [html.Tr([html.Td(df.iloc[i][col]) for col in df.columns]) for i in range(min(10, len(df)))]
                 )
             ])
         except Exception as e:
             return f'Error processing file: {e}'
+    return "Please upload a CSV file."
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
