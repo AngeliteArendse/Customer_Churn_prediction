@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: student-grade-dash
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn customer_churn:server
+    plan: free
