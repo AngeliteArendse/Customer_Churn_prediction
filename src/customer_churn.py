@@ -7,49 +7,38 @@ from dash.dependencies import Input, Output
 from sklearn.preprocessing import StandardScaler
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
-from sklearn.metrics import accuracy_score, classification_report
 import joblib
 import base64
 import io
 import os
 
-# Load pre-trained models
+# Load pre-trained models and scaler
 best_logreg = joblib.load('artifacts/best_logreg.pkl')
 best_rf = joblib.load('artifacts/best_rf.pkl')
-
-# Initialize scaler
-scaler = StandardScaler()
-
-# Load and preprocess data for fitting scaler
-filename = "data/Telco-Customer-Churn.csv"
-df = pd.read_csv(filename)
-df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
-df['TotalCharges'] = df['TotalCharges'].fillna(df['TotalCharges'].mean())
-
-df_encoded = pd.get_dummies(df, drop_first=True)
-scaler.fit(df_encoded[['tenure', 'MonthlyCharges', 'TotalCharges']])
+scaler = joblib.load('artifacts/scaler.pkl')
 
 # Initialize Dash app
-app = dash.Dash(__name__)
+app = dash.Dash(__name__, assets_folder='src/assets')  # Point to the assets folder for CSS
+server = app.server  # Explicitly define server for Gunicorn
 
 app.layout = html.Div([
-    html.H1('Customer Churn Prediction'),
+    html.H1('Customer Churn Prediction', className='header'),
     
     html.Div([
-        html.Label('Enter Customer Data:'),
+        html.Label('Enter Customer Data:', className='label'),
         dcc.Input(id='input-tenure', type='number', placeholder='Tenure (e.g., 12)', style={'margin': '5px'}),
         dcc.Input(id='input-monthlycharges', type='number', placeholder='Monthly Charges (e.g., 60)', style={'margin': '5px'}),
         dcc.Input(id='input-totalcharges', type='number', placeholder='Total Charges (e.g., 500)', style={'margin': '5px'}),
-        html.Button('Predict', id='submit-button', n_clicks=0, style={'margin': '5px'}),
-    ], style={'padding': '20px'}),
+        html.Button('Predict', id='submit-button', n_clicks=0, className='button'),
+    ], className='input-container'),
     
-    html.Div(id='output-prediction', style={'padding': '20px'}),
+    html.Div(id='output-prediction', className='output'),
     
     html.Div([
-        html.Label('Upload CSV of Customer Data for Batch Prediction:'),
-        dcc.Upload(id='upload-data', children=html.Button('Upload CSV'), multiple=False),
-        html.Div(id='output-upload')
-    ], style={'padding': '20px'})
+        html.Label('Upload CSV of Customer Data for Batch Prediction:', className='label'),
+        dcc.Upload(id='upload-data', children=html.Button('Upload CSV', className='button'), multiple=False),
+        html.Div(id='output-upload', className='output')
+    ], className='upload-container')
 ])
 
 @app.callback(
