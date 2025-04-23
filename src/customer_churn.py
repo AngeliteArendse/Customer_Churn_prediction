@@ -10,6 +10,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier, VotingClassifier
 from sklearn.metrics import accuracy_score, classification_report
 import joblib
+import os
 
 df = pd.read_csv('../data/Telco-Customer-Churn.csv')
 df['TotalCharges'] = pd.to_numeric(df['TotalCharges'], errors='coerce')
@@ -138,4 +139,5 @@ def update_output(content):
             return f'Error processing file: {e}'
 
 if __name__ == '__main__':
+    port = int(os.environ.get("PORT", 10000))
     app.run_server(debug=False, host="0.0.0.0", port=port)

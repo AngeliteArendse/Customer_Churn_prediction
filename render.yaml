@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: student-grade-dash
+    name: Customer_Churn_prediction
     env: python
     buildCommand: pip install -r requirements.txt
     startCommand: gunicorn customer_churn:server
