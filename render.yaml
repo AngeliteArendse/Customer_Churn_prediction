@@ -3,5 +3,5 @@ services:
     name: Customer_Churn_prediction
     env: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn customer_churn:server
+    startCommand: gunicorn src.customer_churn:server
     plan: free
