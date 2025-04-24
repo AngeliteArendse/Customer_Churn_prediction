@@ -31,13 +31,7 @@ app.layout = html.Div([
     ], className='input-container'),
     
     html.Div(id='output-prediction', className='output'),
-    
-    html.Div([
-        html.Label('Upload CSV of Customer Data for Batch Prediction:', className='label'),
-        dcc.Upload(id='upload-data', children=html.Button('Upload CSV', className='button'), multiple=False),
-        html.Div(id='output-upload', className='output')
-    ], className='upload-container')
-])
+    ])
 
 @app.callback(
     Output('output-prediction', 'children'),
@@ -102,7 +96,6 @@ def update_output(content):
             ])
         except Exception as e:
             return f'Error processing file: {e}'
-    return "Please upload a CSV file."
 
 if __name__ == '__main__':
     port = int(os.environ.get("PORT", 10000))
